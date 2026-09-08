@@ -31,6 +31,9 @@ class RegistrationService:
         os.makedirs(out_dir, exist_ok=True)
         logger.info(f"Output directory for session {session_id}: {out_dir}")
 
+        # Brief yield to allow the frontend WebSocket handshake to establish
+        await asyncio.sleep(0.3)
+
         # Load images
         logger.info(f"Broadcasting raw progress for session {session_id}")
         await manager.broadcast_progress(session_id, "raw", 10)

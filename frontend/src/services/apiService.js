@@ -1,6 +1,8 @@
-const API_BASE = 'http://localhost:8001/api/v1';
+const BACKEND_HOST = import.meta.env.VITE_BACKEND_HOST || 'localhost:8088';
+const API_BASE = `http://${BACKEND_HOST}/api/v1`;
 
 export const apiService = {
+  API_BASE,
   async uploadImages(sourceFile, referenceFile) {
     const formData = new FormData();
     formData.append('source', sourceFile);
@@ -38,7 +40,7 @@ export const apiService = {
   },
 
   getWebSocketUrl(sessionId) {
-    return `ws://localhost:8001/api/v1/registration/ws/progress/${sessionId}`;
+    return `ws://${BACKEND_HOST}/api/v1/registration/ws/progress/${sessionId}`;
   },
 
   getImageUrl(sessionId, type, idx) {
