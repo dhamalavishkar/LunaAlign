@@ -12,12 +12,21 @@ def detect_format(file_path: str) -> str:
     if ext in ['.fits', '.fit']:
         return 'FITS'
     elif ext in ['.lbl', '.xml']:
-        # Often PDS labels
         return 'PDS'
-    elif ext == '.img':
-        # Could be PDS or ISRO IMG. We will classify as 'IMG' and let the handler decide.
+    elif ext in ['.img', '.bin', '.dat', '.raw']:
         return 'IMG'
-    elif ext in ['.png', '.jpg', '.jpeg', '.tif', '.tiff']:
+    elif ext in ['.png', '.jpg', '.jpeg', '.tif', '.tiff', '.bmp']:
         return 'STANDARD'
-    else:
-        return 'UNKNOWN'
+        
+    # Inspect header bytes if extension is unrecognized
+    try:
+        with open(file_path, 'rb') as f:
+            sample = f.read(512).decode('latin1', errors='ignore')
+            if 'PDS_VERSION_ID' in sample or 'RECORD_BYTES' in sample:
+                return 'IMG'
+            if 'SIMPLE  =' in sample:
+                return 'FITS'
+    except Exception:
+        pass
+
+    return 'UNKNOWN'

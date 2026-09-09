@@ -149,5 +149,7 @@ backend/cache/
 backend_err.txt
 backend_out.txt
 frontend/dist/
+frontend/node_modules/
 node_modules/
+venv312/
 

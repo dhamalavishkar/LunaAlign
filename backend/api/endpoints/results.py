@@ -82,3 +82,76 @@ async def get_raw_image(session_id: str, img_type: str):
 
     logger.info(f"Serving raw image: {path}")
     return FileResponse(path)
+
+
+# ============================================================
+# GAP 4 — BENCHMARK ENDPOINT
+# ============================================================
+
+@router.get("/{session_id}/benchmark")
+async def get_benchmark(session_id: str):
+    """Returns the quantitative benchmark results (SIFT vs IllumInvariant vs LoFTR)."""
+    path = f"backend/cache/results/{session_id}/benchmark.json"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Benchmark results not found. Run benchmark first.")
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+# ============================================================
+# GAP 5 — SCIENTIFIC OUTPUT ENDPOINTS
+# ============================================================
+
+@router.get("/{session_id}/heatmap")
+async def get_uncertainty_heatmap(session_id: str):
+    """Returns the uncertainty/confidence heatmap image."""
+    path = f"backend/cache/results/{session_id}/uncertainty_heatmap.png"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Heatmap not found")
+    return FileResponse(path, media_type="image/png")
+
+
+@router.get("/{session_id}/overlay")
+async def get_registration_overlay(session_id: str):
+    """Returns the registration overlay (checkerboard blend) image."""
+    path = f"backend/cache/results/{session_id}/registration_overlay.png"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Overlay not found")
+    return FileResponse(path, media_type="image/png")
+
+
+
+# ============================================================
+# GAP 4 — BENCHMARK ENDPOINT
+# ============================================================
+
+@router.get("/{session_id}/benchmark")
+async def get_benchmark(session_id: str):
+    """Returns the quantitative benchmark results (SIFT vs IllumInvariant vs LoFTR)."""
+    path = f"backend/cache/results/{session_id}/benchmark.json"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Benchmark results not found. Run benchmark first.")
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+# ============================================================
+# GAP 5 — SCIENTIFIC OUTPUT ENDPOINTS
+# ============================================================
+
+@router.get("/{session_id}/heatmap")
+async def get_uncertainty_heatmap(session_id: str):
+    """Returns the uncertainty/confidence heatmap image."""
+    path = f"backend/cache/results/{session_id}/uncertainty_heatmap.png"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Heatmap not found")
+    return FileResponse(path, media_type="image/png")
+
+
+@router.get("/{session_id}/overlay")
+async def get_registration_overlay(session_id: str):
+    """Returns the registration overlay (checkerboard blend) image."""
+    path = f"backend/cache/results/{session_id}/registration_overlay.png"
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Overlay not found")
+    return FileResponse(path, media_type="image/png")

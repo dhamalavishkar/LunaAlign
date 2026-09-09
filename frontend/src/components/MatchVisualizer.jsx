@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../services/apiService';
-import { Download, Crosshair, Radar, FileCode, Cpu, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Download, Crosshair, Radar, FileCode, Cpu, ShieldCheck } from 'lucide-react';
 
 const MatchVisualizer = ({ sessionId, metrics }) => {
   const [dossier, setDossier] = useState(null);
@@ -10,7 +10,10 @@ const MatchVisualizer = ({ sessionId, metrics }) => {
     if (sessionId && metrics.dossier_index !== null && metrics.dossier_index !== undefined && metrics.dossier_index >= 0) {
       apiService.fetchResults(sessionId)
         .then(() => {
-          return fetch(`${apiService.API_BASE}/results/${sessionId}/dossier/${metrics.dossier_index}`);
+          const wsUrl = apiService.getWebSocketUrl(sessionId);
+          const httpUrl = wsUrl.replace('ws://', 'http://')
+                               .replace('/api/v1/registration/ws/progress/', '/api/v1/results/');
+          return fetch(`${httpUrl}/dossier/${metrics.dossier_index}`);
         })
         .then(res => {
           if (!res.ok) {
@@ -67,48 +70,9 @@ const MatchVisualizer = ({ sessionId, metrics }) => {
   }
 
   if (!dossier) {
-    const isExhaustion = metrics.status === 'INSUFFICIENT_MATCHES' || metrics.inliers === 0;
-    const diag = metrics.diagnostic_report;
-
     return (
       <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-annotation)' }}>
-        {isExhaustion ? (
-          <div style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--status-warning)' }}>
-              <AlertTriangle size={24} />
-              <h3 style={{ fontFamily: 'var(--font-display)', margin: 0 }}>
-                {metrics.status === 'INSUFFICIENT_MATCHES' ? 'PIPELINE EXHAUSTION DETECTED' : 'NO INLIER TIE POINTS DETECTED'}
-              </h3>
-            </div>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-telemetry)', lineHeight: '1.5' }}>
-              {metrics.error || 'Found 0 geometrically consistent keypoint correspondences across this image pair.'}
-            </p>
-            {diag && (
-              <div className="glass-panel-inset" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div>
-                  <span style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-telemetry)', color: 'var(--primary-neon)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Incident Mode
-                  </span>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-annotation)', marginTop: '2px' }}>{diag.incident}</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-telemetry)', color: 'var(--status-warning)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Root Cause
-                  </span>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-annotation)', marginTop: '2px' }}>{diag.cause}</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.6875rem', fontFamily: 'var(--font-telemetry)', color: 'var(--status-nominal)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Engine Recommendation
-                  </span>
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-annotation)', marginTop: '2px' }}>{diag.remediation}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p>No inlier tie points or dossier telemetry available for this run.</p>
-        )}
+        <p>No inlier tie points or dossier telemetry available for this run.</p>
       </div>
     );
   }
