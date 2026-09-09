@@ -49,6 +49,10 @@ export const apiService = {
       return `${API_BASE}/results/${sessionId}/image/${type}`;
   },
 
+  getWarpedImageUrl(sessionId) {
+      return `${API_BASE}/results/${sessionId}/image/warped`;
+  },
+
   async generateDem(sessionId) {
     const response = await fetch(`${API_BASE}/dem/${sessionId}/generate`, {
       method: 'POST'

@@ -15,19 +15,66 @@ class DemService:
     def generate_dem(session_id: str, num_disparities: int = 64, block_size: int = 9) -> dict:
         logger.info(f"Computing 3D DEM for session {session_id}")
         
-        src_path = f"backend/cache/images/{session_id}/source.png"
-        ref_path = f"backend/cache/images/{session_id}/reference.png"
+        session_img_dir = f"backend/cache/images/{session_id}"
         out_dir = f"backend/cache/results/{session_id}"
         os.makedirs(out_dir, exist_ok=True)
-        
-        if not os.path.exists(src_path) or not os.path.exists(ref_path):
-            raise FileNotFoundError(f"Source or reference image not found for session {session_id}")
-            
-        img_left = cv2.imread(src_path)
-        img_right = cv2.imread(ref_path)
-        
-        if img_left is None or img_right is None:
-            raise ValueError("Corrupted image binaries during DEM computation")
+
+        def _find_and_load_image(img_prefix: str) -> np.ndarray:
+            # 1. Prefer standard PNG or preview PNG
+            candidates = [
+                os.path.join(session_img_dir, f"{img_prefix}.png"),
+                os.path.join(session_img_dir, f"{img_prefix}_preview.png"),
+                os.path.join(session_img_dir, f"{img_prefix}.jpg"),
+                os.path.join(session_img_dir, f"{img_prefix}.jpeg"),
+                os.path.join(session_img_dir, f"{img_prefix}.tif"),
+            ]
+            for c in candidates:
+                if os.path.exists(c):
+                    img = cv2.imread(c)
+                    if img is not None:
+                        return img
+
+            # 2. Check manifest for original file
+            manifest_path = os.path.join(session_img_dir, "manifest.json")
+            if os.path.exists(manifest_path):
+                try:
+                    with open(manifest_path, "r", encoding="utf-8") as mf:
+                        manifest = json.load(mf)
+                    orig_path = manifest.get(f"{img_prefix}_path")
+                    if orig_path and os.path.exists(orig_path):
+                        from src.data.io.data_loader import DataLoader
+                        arr, _ = DataLoader().load_image(orig_path, max_dim=1024)
+                        if arr is not None:
+                            if arr.dtype != np.uint8:
+                                arr = np.clip(arr, 0, 255).astype(np.uint8)
+                            if len(arr.shape) == 2:
+                                arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+                            return arr
+                except Exception as me:
+                    logger.warning(f"Manifest loading failed for {img_prefix}: {me}")
+
+            # 3. Check any matching file in folder
+            if os.path.exists(session_img_dir):
+                raw_files = [f for f in os.listdir(session_img_dir) if f.startswith(f"{img_prefix}.")]
+                for rf in raw_files:
+                    full_p = os.path.join(session_img_dir, rf)
+                    try:
+                        from src.data.io.data_loader import DataLoader
+                        arr, _ = DataLoader().load_image(full_p, max_dim=1024)
+                        if arr is not None:
+                            if arr.dtype != np.uint8:
+                                arr = np.clip(arr, 0, 255).astype(np.uint8)
+                            if len(arr.shape) == 2:
+                                arr = cv2.cvtColor(arr, cv2.COLOR_GRAY2BGR)
+                            return arr
+                    except Exception:
+                        pass
+
+            raise FileNotFoundError(f"{img_prefix.capitalize()} image not found or unreadable for session {session_id}")
+
+        img_left = _find_and_load_image("source")
+        img_right = _find_and_load_image("reference")
+
 
         h, w = img_left.shape[:2]
         # Resize if very large for fast web delivery and responsive Three.js rendering

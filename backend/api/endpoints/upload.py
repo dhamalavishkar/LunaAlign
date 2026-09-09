@@ -79,6 +79,17 @@ async def upload_image_pair(source: UploadFile = File(...), reference: UploadFil
     except Exception as e:
         logger.warning(f"Failed to generate reference preview: {e}")
 
+    # Ensure source.png and reference.png exist for downstream web components & DEM service
+    src_png_path = os.path.join(session_dir, "source.png")
+    ref_png_path = os.path.join(session_dir, "reference.png")
+    try:
+        if not os.path.exists(src_png_path) and os.path.exists(src_preview_path):
+            shutil.copyfile(src_preview_path, src_png_path)
+        if not os.path.exists(ref_png_path) and os.path.exists(ref_preview_path):
+            shutil.copyfile(ref_preview_path, ref_png_path)
+    except Exception as e:
+        logger.warning(f"Failed to copy preview to standard PNG: {e}")
+
     manifest = {
         "session_id": session_id,
         "source_filename": source.filename,

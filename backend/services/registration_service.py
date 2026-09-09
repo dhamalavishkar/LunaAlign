@@ -162,6 +162,17 @@ class RegistrationService:
                     "mode": "multimodal",
                 }
 
+                if H_matrix is not None:
+                    try:
+                        H_mat = np.array(H_matrix, dtype=np.float32)
+                        if np.linalg.matrix_rank(H_mat) == 3:
+                            H_inv = np.linalg.inv(H_mat)
+                            warped_ref = cv2.warpPerspective(ref, H_inv, (source.shape[1], source.shape[0]))
+                            cv2.imwrite(os.path.join(out_dir, "warped_reference.png"), warped_ref)
+                            logger.info(f"Saved warped_reference.png for multimodal session {session_id}")
+                    except Exception as w_err:
+                        logger.warning(f"Failed to generate warped_reference.png: {w_err}")
+
                 with open(os.path.join(out_dir, "summary.json"), "w") as f:
                     json.dump(results, f)
 
@@ -309,6 +320,18 @@ class RegistrationService:
                     logger.info(f"Scientific outputs generated for session {session_id}")
                 except Exception as sci_err:
                     logger.warning(f"Scientific output generation failed: {sci_err}")
+
+            # Generate warped reference for pixel-perfect frontend comparison
+            if H is not None:
+                try:
+                    H_mat = np.array(H, dtype=np.float32)
+                    if np.linalg.matrix_rank(H_mat) == 3:
+                        H_inv = np.linalg.inv(H_mat)
+                        warped_ref = cv2.warpPerspective(ref, H_inv, (source.shape[1], source.shape[0]))
+                        cv2.imwrite(os.path.join(out_dir, "warped_reference.png"), warped_ref)
+                        logger.info(f"Saved warped_reference.png for session {session_id}")
+                except Exception as w_err:
+                    logger.warning(f"Failed to generate warped_reference.png: {w_err}")
 
             # Calculate actual metric
             if H is not None:

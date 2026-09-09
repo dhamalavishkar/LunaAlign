@@ -499,7 +499,7 @@ function App() {
             <div style={{ marginTop: '8px', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', padding: '4px 2px' }}>
               <span style={{ color: 'var(--text-annotation)' }}>Selected Transform:</span>
               <span style={{ fontFamily: 'var(--font-telemetry)', fontWeight: 600, color: 'var(--secondary-neon)' }}>
-                {String(pipelineState.metrics.model).toUpperCase()}
+                {pipelineState.metrics.model && pipelineState.metrics.model !== '--' ? String(pipelineState.metrics.model).toUpperCase() : '--'}
               </span>
             </div>
           </div>

@@ -278,6 +278,99 @@ const DemVisualizer = ({ sessionId }) => {
     document.body.removeChild(link);
   };
 
+  const exportDemReport = () => {
+    if (!demData) return;
+    const now = new Date().toLocaleString();
+    const grid = demData.normalized_grid || [];
+    const totalCells = (demData.grid_width || 64) * (demData.grid_height || 64);
+    const elevRange = (demData.max_elevation_m - demData.min_elevation_m).toFixed(1);
+
+    // Elevation histogram buckets (5 bins)
+    const flatGrid = grid.flat();
+    const bins = [0, 0, 0, 0, 0];
+    flatGrid.forEach(v => {
+      const idx = Math.min(4, Math.floor(v * 5));
+      bins[idx]++;
+    });
+    const barChart = bins.map((count, i) => {
+      const label = ['Very Low  (0–20%)', 'Low       (20–40%)', 'Mid       (40–60%)', 'High      (60–80%)', 'Very High (80–100%)'];
+      const pct = ((count / totalCells) * 100).toFixed(1);
+      const bar = '█'.repeat(Math.round(count / totalCells * 30));
+      return `  ${label[i].padEnd(22)} ${bar.padEnd(30)} ${pct}%`;
+    });
+
+    const lines = [
+      '=================================================================',
+      '   LunaAlign AI — 3D Digital Elevation Model (DEM) Report',
+      '   ISRO Smart India Hackathon (SIH 2025) | SIH26166',
+      '=================================================================',
+      '',
+      `  Generated         : ${now}`,
+      `  Session ID        : ${sessionId}`,
+      '',
+      '-----------------------------------------------------------------',
+      '  DEM COMPUTATION PARAMETERS',
+      '-----------------------------------------------------------------',
+      `  Algorithm         : ${demData.algorithm || 'OpenCV StereoSGBM (Semi-Global Block Matching 3-Way)'}`,
+      `  Elevation Grid    : ${demData.grid_width || 64} × ${demData.grid_height || 64} cells`,
+      `  Baseline Parallax : ${demData.baseline_parallax_deg || 4.8}° (cross-track stereo angle)`,
+      `  Resolution        : ~${demData.resolution_m_per_pixel || 5.0} metres per pixel`,
+      `  Total Grid Cells  : ${totalCells.toLocaleString()}`,
+      '',
+      '-----------------------------------------------------------------',
+      '  TOPOGRAPHIC ELEVATION STATISTICS',
+      '-----------------------------------------------------------------',
+      `  Minimum Elevation : ${demData.min_elevation_m} m  (basin / crater floor)`,
+      `  Maximum Elevation : ${demData.max_elevation_m} m  (rim / highland peak)`,
+      `  Mean Elevation    : ${demData.mean_elevation_m} m`,
+      `  Total Relief Depth: ${demData.relief_depth_m} m  (max − min)`,
+      `  Elevation Range   : ${elevRange} m`,
+      '',
+      '  Interpretation:',
+      `    The terrain spans ${demData.relief_depth_m} metres of vertical relief.`,
+      demData.relief_depth_m > 1500
+        ? '    Significant crater-rim-to-floor topography detected.'
+        : '    Relatively flat terrain with mild undulations.',
+      '',
+      '-----------------------------------------------------------------',
+      '  ELEVATION DISTRIBUTION (Normalized Height Histogram)',
+      '-----------------------------------------------------------------',
+      ...barChart,
+      '',
+      '-----------------------------------------------------------------',
+      '  SCIENTIFIC INTERPRETATION',
+      '-----------------------------------------------------------------',
+      '  The 3D DEM was computed using OpenCV StereoSGBM which estimates',
+      '  pixel parallax shifts between a stereo image pair. These shifts',
+      '  correspond to depth variations in the lunar surface terrain.',
+      '',
+      '  Key findings:',
+      `  • The deepest depression is ~${Math.abs(demData.min_elevation_m).toFixed(0)} m below the datum.`,
+      `  • The highest feature is ~${demData.max_elevation_m.toFixed(0)} m above the datum.`,
+      `  • Total terrain relief of ${demData.relief_depth_m} m indicates`,
+      demData.relief_depth_m > 2000
+        ? '    major crater morphology or volcanic highland terrain.'
+        : '    moderate topographic variation consistent with mare plains.',
+      '',
+      '  Applications: Orthorectification, slope hazard mapping,',
+      '  landing site analysis, change detection, crater morphometry.',
+      '',
+      '=================================================================',
+      '  End of LunaAlign DEM Report',
+      '=================================================================',
+    ];
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `lunaalign_dem_report_${sessionId}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!sessionId) {
     return (
       <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-annotation)' }}>
@@ -406,13 +499,20 @@ const DemVisualizer = ({ sessionId }) => {
             <RotateCw size={12} />
           </button>
 
-          {/* Export JSON */}
+          {/* Export Buttons */}
           <button
             className="btn btn-secondary"
             onClick={exportDemJson}
             style={{ padding: '4px 10px', fontSize: '0.6875rem' }}
           >
-            <Download size={12} color="var(--primary-neon)" /> Export DEM
+            <Download size={12} color="var(--primary-neon)" /> Export JSON
+          </button>
+          <button
+            className="btn btn-secondary"
+            onClick={exportDemReport}
+            style={{ padding: '4px 10px', fontSize: '0.6875rem', color: 'var(--secondary-neon)', borderColor: 'rgba(167,139,250,0.4)' }}
+          >
+            <Download size={12} color="var(--secondary-neon)" /> DEM Report (.txt)
           </button>
         </div>
       </div>

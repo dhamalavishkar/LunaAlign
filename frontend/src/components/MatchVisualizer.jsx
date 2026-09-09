@@ -109,6 +109,97 @@ const MatchVisualizer = ({ sessionId, metrics }) => {
     document.body.removeChild(link);
   };
 
+  const exportHumanReport = () => {
+    if (!dossier) return;
+    const matchInfo = dossier['Match Information'] || {};
+    const now = new Date().toLocaleString();
+    const inlierRatio = metrics.total_matches > 0
+      ? `${(metrics.inliers / metrics.total_matches * 100).toFixed(1)}%`
+      : 'N/A';
+    const isSubpixel = typeof metrics.rmse === 'number' && metrics.rmse < 1.0;
+
+    const lines = [
+      '=================================================================',
+      '   LunaAlign AI — Registration Telemetry Report',
+      '   ISRO Smart India Hackathon (SIH 2025) | SIH26166',
+      '=================================================================',
+      '',
+      `  Generated   : ${now}`,
+      `  Session ID  : ${sessionId}`,
+      '',
+      '-----------------------------------------------------------------',
+      '  REGISTRATION SUMMARY',
+      '-----------------------------------------------------------------',
+      `  Transformation Model  : ${String(metrics.model || 'N/A').toUpperCase()}`,
+      `  Residual RMSE         : ${metrics.rmse} pixel${isSubpixel ? '  ✓ SUB-PIXEL CONVERGENCE' : ''}`,
+      `  Inlier Correspondences: ${metrics.inliers} / ${metrics.total_matches || metrics.inliers}`,
+      `  Inlier Ratio          : ${inlierRatio}`,
+      `  Dossier Match Index   : #${metrics.dossier_index}`,
+      '',
+      '-----------------------------------------------------------------',
+      '  SUB-PIXEL TIE POINT — MATCH INFORMATION',
+      '-----------------------------------------------------------------',
+    ];
+
+    for (const [key, value] of Object.entries(matchInfo)) {
+      let formatted = value;
+      if (typeof value === 'number') {
+        if (key.includes('Coordinate') || key.includes('Distance') || key.includes('Scale')) {
+          formatted = `${value.toFixed(3)} px`;
+        } else if (key.includes('Angle')) {
+          formatted = `${value.toFixed(2)}°`;
+        } else if (key.includes('Ratio')) {
+          formatted = value.toFixed(3);
+        } else {
+          formatted = value.toFixed(4);
+        }
+      }
+      lines.push(`  ${key.padEnd(30)}: ${formatted}`);
+    }
+
+    if (metrics.H_matrix) {
+      lines.push('');
+      lines.push('-----------------------------------------------------------------');
+      lines.push('  HOMOGRAPHY MATRIX H (3×3)');
+      lines.push('  (Maps source pixel coordinates into registered reference frame)');
+      lines.push('-----------------------------------------------------------------');
+      const H = metrics.H_matrix;
+      for (const row of H) {
+        lines.push(`  [ ${row.map(v => String(v.toFixed(6)).padStart(14)).join('  ')} ]`);
+      }
+    }
+
+    lines.push('');
+    lines.push('-----------------------------------------------------------------');
+    lines.push('  QUALITY ASSESSMENT');
+    lines.push('-----------------------------------------------------------------');
+    if (isSubpixel) {
+      lines.push('  ✓ Registration achieved sub-pixel accuracy (RMSE < 1.0 px).');
+      lines.push('    The aligned image pair is suitable for scientific analysis,');
+      lines.push('    change detection, photogrammetric DEM generation, and orthorectification.');
+    } else {
+      lines.push('  ⚠ Registration is pixel-level (RMSE ≥ 1.0 px).');
+      lines.push('    Consider using the multimodal pipeline or reviewing image quality.');
+    }
+    lines.push('');
+    lines.push('  Algorithm  : OpenCV SIFT → Sub-Pixel Refinement → USAC/MAGSAC++ RANSAC');
+    lines.push('  Pipeline   : Illumination-Invariant Feature Matching + Spatial Distribution');
+    lines.push('');
+    lines.push('=================================================================');
+    lines.push('  End of LunaAlign Report');
+    lines.push('=================================================================');
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `lunaalign_telemetry_report_${sessionId}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', height: '100%', overflowY: 'auto', paddingRight: '4px' }}>
       {/* Dossier Header Bar */}
@@ -141,9 +232,14 @@ const MatchVisualizer = ({ sessionId, metrics }) => {
           </div>
         </div>
 
-        <button className="btn btn-secondary" onClick={exportReport} style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
-          <Download size={14} color="var(--primary-neon)" /> Export JSON Telemetry
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn btn-secondary" onClick={exportReport} style={{ padding: '6px 12px', fontSize: '0.75rem' }}>
+            <Download size={14} color="var(--primary-neon)" /> Export JSON
+          </button>
+          <button className="btn btn-secondary" onClick={exportHumanReport} style={{ padding: '6px 12px', fontSize: '0.75rem', color: 'var(--secondary-neon)', borderColor: 'rgba(167,139,250,0.4)' }}>
+            <FileCode size={14} color="var(--secondary-neon)" /> Export Report (.txt)
+          </button>
+        </div>
       </div>
 
       {/* Top 3 High-Level Metrics */}
